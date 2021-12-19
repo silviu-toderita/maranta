@@ -1,0 +1,3 @@
+[submodule "lib/ESPProLib"]
+	path = lib/ESPProLib
+	url = git@github.com:RicardoOliveira/ESPProLib.git
