@@ -1,9 +1,9 @@
 #include <ESP8266WiFi.h>
 
 #include "HumanTracker.h"
-#include "wifi_structs.h"
 
-#define CHANNEL_INCREMENT_INTERVAL_MS   100
+#define CHANNEL_INCREMENT_INTERVAL_MS   150
+#define MILISECONDS_IN_SECOND			1000
 
 #define WIFI_CTRL_MSG_LENGTH            12
 #define WIFI_FRAME_SRC_ADDR_OFFSET      10
@@ -51,8 +51,12 @@ void HumanTracker::loop() {
             Serial.println("New MAC Found: " + macAddr.toString() + " | Unique: " + String(macAddrs.size()));
         }
 
-        incrementChannel();
+        
     }
+
+    incrementChannel();
+
+    calculateProbeAverages();
 }
 
 void HumanTracker::incrementChannel() {
@@ -68,4 +72,17 @@ void HumanTracker::incrementChannel() {
 
     }
 
+}
+
+void HumanTracker::calculateProbeAverages() {
+    if(millis() > lastProbeCountTime + MILISECONDS_IN_SECOND) {
+		lastProbeCountTime = millis();
+		totalSeconds++;
+
+		uint32_t currentProbeCount = probeCount - lastProbeCount;
+		probeCountAverage = ((probeCountAverage * (totalSeconds - 1)) + currentProbeCount) / totalSeconds;
+
+		lastProbeCount = probeCount;
+		Serial.println("Probes per Second (avg):" + String(probeCountAverage));
+	}
 }

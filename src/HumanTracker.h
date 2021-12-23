@@ -10,6 +10,8 @@
 #define WIFI_CHANNEL_MIN 1
 #define WIFI_CHANNEL_MAX 11
 
+
+
 class HumanTracker {
     public:
 
@@ -26,7 +28,15 @@ class HumanTracker {
         uint8_t channel = WIFI_CHANNEL_MIN;
         uint64_t lastChannelIncrement = 0;
 
+        uint32_t lastProbeCount     = 0;
+        uint64_t lastProbeCountTime = 0;
+        double probeCountAverage    = 0.0;
+        uint32_t totalSeconds       = 0;
+
+
         void incrementChannel();
+
+        void calculateProbeAverages();
 
 };
 
