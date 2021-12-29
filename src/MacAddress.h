@@ -16,18 +16,12 @@ class MacAddress {
 
         bool operator== (const MacAddress &other) const;
 
+        bool operator< (const MacAddress &other) const;
+
         String toString();
 
     private:
         mutable uint8_t addr[MAC_ADDR_LENGTH];
-
-};
-
-class MacAddressHash{
-
-    public:
-
-        size_t operator()(const MacAddress &m) const;
 
 };
 

@@ -2,10 +2,11 @@
 #define _HUMAN_TRACKER_H_
 
 #include <queue>
-#include <unordered_set>
+#include <map>
 
 #include "Arduino.h"
 #include "MacAddress.h"
+#include "EmaBuffer.h"
 
 #define WIFI_CHANNEL_MIN 1
 #define WIFI_CHANNEL_MAX 11
@@ -24,19 +25,15 @@ class HumanTracker {
 
     private:
 
-        std::unordered_set<MacAddress, MacAddressHash> macAddrs;
-        uint8_t channel = WIFI_CHANNEL_MIN;
-        uint64_t lastChannelIncrement = 0;
+        std::map<MacAddress, uint64_t> _macAddrs;
+        uint8_t _channel = WIFI_CHANNEL_MIN;
+        uint64_t _lastChannelIncrement = 0;
 
-        uint32_t lastProbeCount     = 0;
-        uint64_t lastProbeCountTime = 0;
-        double probeCountAverage    = 0.0;
-        uint32_t totalSeconds       = 0;
+        EmaBuffer _emaProbes;
 
+        void _incrementChannel();
 
-        void incrementChannel();
-
-        void calculateProbeAverages();
+        void _calculateProbeAverage();
 
 };
 

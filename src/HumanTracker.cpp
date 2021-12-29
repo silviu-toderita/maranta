@@ -2,8 +2,9 @@
 
 #include "HumanTracker.h"
 
-#define CHANNEL_INCREMENT_INTERVAL_MS   150
-#define MILISECONDS_IN_SECOND			1000
+#define CHANNEL_INCREMENT_INTERVAL_MS   200
+
+#define DEVICE_STALE_INTERVAL_MS        30000
 
 #define WIFI_CTRL_MSG_LENGTH            12
 #define WIFI_FRAME_SRC_ADDR_OFFSET      10
@@ -26,7 +27,7 @@ void promRxCb(uint8_t *buf, uint16_t len) {
     // Check if this is a Probe Request frame
     if(payload[0] == FRAME_TYPE_PROBE_REQ) {
 
-            Serial.println("Total Requests: " + String(++HumanTracker::probeCount));
+            HumanTracker::probeCount++;
             MacAddress newMacAddr(payload + WIFI_FRAME_SRC_ADDR_OFFSET);
             HumanTracker::newMacAddrs.push(newMacAddr);
 
@@ -34,10 +35,10 @@ void promRxCb(uint8_t *buf, uint16_t len) {
 
 }
 
-HumanTracker::HumanTracker() {
+HumanTracker::HumanTracker() : _emaProbes(0.05) {
     wifi_station_disconnect();
     wifi_set_opmode(STATION_MODE);
-    wifi_set_channel(channel);
+    wifi_set_channel(_channel);
     wifi_promiscuous_enable(false);
     wifi_set_promiscuous_rx_cb(promRxCb);
     wifi_promiscuous_enable(true);
@@ -47,42 +48,41 @@ void HumanTracker::loop() {
     if(!newMacAddrs.empty()) {
         MacAddress macAddr = newMacAddrs.front();
         newMacAddrs.pop();
-        if(macAddrs.emplace(macAddr).second) {
-            Serial.println("New MAC Found: " + macAddr.toString() + " | Unique: " + String(macAddrs.size()));
-        }
-
-        
+        _macAddrs[macAddr] = millis();
+ 
     }
 
-    incrementChannel();
-
-    calculateProbeAverages();
+    _incrementChannel();
 }
 
-void HumanTracker::incrementChannel() {
-    if(millis() > lastChannelIncrement + CHANNEL_INCREMENT_INTERVAL_MS) {
-        lastChannelIncrement = millis();
+void HumanTracker::_incrementChannel() {
+    if(millis() > _lastChannelIncrement + CHANNEL_INCREMENT_INTERVAL_MS) {
+        _lastChannelIncrement = millis();
 
-        if(channel == WIFI_CHANNEL_MAX) {
-            channel = WIFI_CHANNEL_MIN;
+        if(_channel == WIFI_CHANNEL_MAX) {
+            _calculateProbeAverage();
+            _channel = WIFI_CHANNEL_MIN;
         } else {
-            channel++;
+            _channel++;
         }
-        wifi_set_channel(channel);
+        wifi_set_channel(_channel);
 
     }
 
 }
 
-void HumanTracker::calculateProbeAverages() {
-    if(millis() > lastProbeCountTime + MILISECONDS_IN_SECOND) {
-		lastProbeCountTime = millis();
-		totalSeconds++;
+void HumanTracker::_calculateProbeAverage() {
+    _emaProbes.add(probeCount);
+    probeCount = 0;
 
-		uint32_t currentProbeCount = probeCount - lastProbeCount;
-		probeCountAverage = ((probeCountAverage * (totalSeconds - 1)) + currentProbeCount) / totalSeconds;
+    double probeRate = _emaProbes.get();
+    uint32_t uniqueDevices = _macAddrs.size();
 
-		lastProbeCount = probeCount;
-		Serial.println("Probes per Second (avg):" + String(probeCountAverage));
-	}
+    Serial.println("Probe Rate: " + String(probeRate) + " - Unique Devices: " + String(uniqueDevices) + " - People Density: " + String(probeRate * uniqueDevices));
+    
+    for(auto const& i : _macAddrs) {
+        if(millis() > i.second + DEVICE_STALE_INTERVAL_MS) {
+            _macAddrs.erase(i.first);
+        }
+    }
 }

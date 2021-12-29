@@ -17,6 +17,17 @@ bool MacAddress::operator== (const MacAddress &other) const {
     return true;
 }
 
+bool MacAddress::operator< (const MacAddress &other) const {
+    for (uint8_t i=0; i < MAC_ADDR_LENGTH; i++) {
+        if (addr[i] > other.addr[i]) {
+            return false;
+        } else if(addr[i] < other.addr[i]) {
+            return true;
+        }
+    }
+    return false;
+}
+
 String MacAddress::toString() {
     String strFormat;
     for(uint8_t i = 0; i < MAC_ADDR_LENGTH; i++) {
@@ -25,14 +36,4 @@ String MacAddress::toString() {
     }
 
     return strFormat;
-}
-
-size_t MacAddressHash::operator()(const MacAddress &m) const {
-    size_t hash = 0;
-
-    for(uint8_t i = 0; i < MAC_ADDR_LENGTH; i += 2) {
-        hash = hash ^ std::hash<uint16_t>()(*(uint16_t*)(m.get() + i));
-    }
-
-    return hash;
 }
