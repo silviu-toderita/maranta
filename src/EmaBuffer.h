@@ -3,7 +3,7 @@
 
 #include "Arduino.h"
 
-#define COUNT_ADJUSTMENT_PERIOD 60
+#define COUNT_ADJUSTMENT_PERIOD 3000
 #define ALPHA_MAX_FACTOR        4.0
 
 class EmaBuffer {

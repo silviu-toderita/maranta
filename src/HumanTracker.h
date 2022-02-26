@@ -5,33 +5,32 @@
 #include <map>
 
 #include "Arduino.h"
-#include "MacAddress.h"
+#include "constants.h"
 #include "EmaBuffer.h"
 
 #define WIFI_CHANNEL_MIN 1
 #define WIFI_CHANNEL_MAX 11
 
 
-
 class HumanTracker {
     public:
 
-        static std::queue<MacAddress> newMacAddrs;
         static uint32_t probeCount;
+        static VERBOSITY_LEVEL _verbose;
 
-        HumanTracker();
+        HumanTracker(VERBOSITY_LEVEL verbose = VERBOSE_OFF);
 
         void loop();
 
+        double get();
+
     private:
 
-        std::map<MacAddress, uint64_t> _macAddrs;
         uint8_t _channel = WIFI_CHANNEL_MIN;
         uint64_t _lastChannelIncrement = 0;
 
         EmaBuffer _emaProbes;
-
-        void _incrementChannel();
+        uint64_t _lastUpdate = 0;
 
         void _calculateProbeAverage();
 
