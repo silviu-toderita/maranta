@@ -3,8 +3,9 @@
 
 typedef enum {
     VERBOSE_OFF=0,
-    VERBOSE_IMPORTANT=1,
-    VERBOSE_ALL=2
+    VERBOSE_LOW=1,
+    VERBOSE_MED=2,
+    VERBOSE_HIGH=3
 } VERBOSITY_LEVEL;
 
 #endif

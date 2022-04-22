@@ -3,8 +3,6 @@
 #include "HumanTracker.h"
 
 #define CHANNEL_INCREMENT_INTERVAL_MS   200
-#define UPDATE_INTERVAL_MS              20
-
 #define MAC_ADDR_LENGTH                 6
 #define WIFI_CTRL_MSG_LENGTH            12
 #define WIFI_FRAME_SRC_ADDR_OFFSET      10
@@ -40,7 +38,7 @@ void promRxCb(uint8_t *buf, uint16_t len) {
 
             HumanTracker::probeCount++;
 
-            if(HumanTracker::_verbose == VERBOSE_ALL) {
+            if(HumanTracker::_verbose == VERBOSE_HIGH) {
                 Serial.println("Probe Req From: " + macAddrToString(payload + WIFI_FRAME_SRC_ADDR_OFFSET));
             }
 
@@ -48,7 +46,7 @@ void promRxCb(uint8_t *buf, uint16_t len) {
 
 }
 
-HumanTracker::HumanTracker(VERBOSITY_LEVEL verbose) : _emaProbes(0.001) {
+HumanTracker::HumanTracker(VERBOSITY_LEVEL verbose) {
     _verbose = verbose;
 
     wifi_station_disconnect();
@@ -73,18 +71,34 @@ void HumanTracker::loop() {
 
     }
 
-    if(millis() > _lastUpdate + UPDATE_INTERVAL_MS) {
+    if(millis() > _lastUpdate + ACC_UPDATE_INTERVAL) {
         _lastUpdate = millis();
         _calculateProbeAverage();
+        if(_verbose >= VERBOSE_LOW) {
+            Serial.println("HumanTracker: " + String(_accumulator));
+        }
     } 
     
 }
 
-double HumanTracker::get() {
-    return _emaProbes.get();
+uint32_t HumanTracker::get() {
+    return _accumulator;
 }
 
 void HumanTracker::_calculateProbeAverage() {
-    _emaProbes.add(probeCount*100);
+
+    uint32_t period = ACC_PERIOD;
+
+    if(++_count < period) {
+        period = _count;
+    }
+
+    if(period < ACC_ALPHA) {
+        period = ACC_ALPHA;
+    }
+
+    _accumulator =  (probeCount * ACC_MULTIPLIER) 
+                    + ((_accumulator * (period - ACC_ALPHA)) / period);
+
     probeCount = 0;
 }
