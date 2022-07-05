@@ -45,6 +45,15 @@ class LightGenerator {
         uint64_t _lastDecrementMax = 0;
 
         /**
+         * Calculate the averaged color from a palette based on the intensity factor
+         * 
+         * @param palette[]
+         * 
+         * @return averaged color
+        **/
+        Color colorCalculator(const Color palette[]);
+
+        /**
          * Print a graph of the current light status
          * 
          * @param humans x100

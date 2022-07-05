@@ -26,7 +26,7 @@ void LightGenerator::loop(uint32_t humans) {
     if(_intensity) {
         colorId = ((_intensity * COLORS_IN_PALETTE) - 1) / INTENSITY_FACTOR;
     }
-    Color color = PALETTES[1][colorId];
+    Color color = colorCalculator(PALETTES[1]);
     
     // Update the NeoPixel
     _pixel.clear();
@@ -36,8 +36,22 @@ void LightGenerator::loop(uint32_t humans) {
     printGraph(humans);
 }
 
+Color LightGenerator::colorCalculator(const Color palette[]) {
+    uint8_t colorId = 0;
+
+    // If any humans are detected, calculate the color ID
+    if(_intensity) {
+        colorId = ((_intensity * COLORS_IN_PALETTE) - 1) / INTENSITY_FACTOR;
+    }
+    
+    return palette[colorId];
+}
+
 void LightGenerator::printGraph(uint32_t humans) {
 
+    // Overwrite last line
+    Serial.printf("\r");
+    
     // Print star if a probe was recently detected
     if(HumanTracker::probeCount) {
         Serial.printf("*");
@@ -70,5 +84,7 @@ void LightGenerator::printGraph(uint32_t humans) {
     }
 
     // Print the max number of humans
-    Serial.printf("|%5d\r", _maxHumans/100);
+    Serial.printf("|%5d", _maxHumans/100);
+
+    Serial.printf("|  Intensity:%5d", _intensity);
 }
