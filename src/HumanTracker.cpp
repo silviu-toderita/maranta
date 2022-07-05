@@ -9,21 +9,15 @@
 #define FRAME_TYPE_PROBE_REQ            0x40
 
 uint32_t HumanTracker::probeCount = 0;
-VERBOSITY_LEVEL HumanTracker::_verbose = VERBOSE_OFF;
 
-String macAddrToString(uint8_t* macAddrPtr) {
-    String strFormat;
-    for(uint8_t i = 0; i < MAC_ADDR_LENGTH; i++) {
-        strFormat += String(macAddrPtr[i],HEX);
-        strFormat += ":";
-    }
-
-    return strFormat.substring(0, strFormat.length() - 1);
-
-}
-
-
-void promRxCb(uint8_t *buf, uint16_t len) {
+/**
+ * Process a packet received over WiFi and check if it is a probe request
+ * 
+ * @param buf pointer to buffer containing payload
+ * @param len length of payload in bytes
+ * 
+**/
+void processWifiPacket(uint8_t *buf, uint16_t len) {
     
     // If this is just a control message, it won't contain a MAC address
     if(len == WIFI_CTRL_MSG_LENGTH) {
@@ -38,27 +32,25 @@ void promRxCb(uint8_t *buf, uint16_t len) {
 
             HumanTracker::probeCount++;
 
-            if(HumanTracker::_verbose == VERBOSE_HIGH) {
-                Serial.println("Probe Req From: " + macAddrToString(payload + WIFI_FRAME_SRC_ADDR_OFFSET));
-            }
-
     }
 
 }
 
-HumanTracker::HumanTracker(VERBOSITY_LEVEL verbose) {
-    _verbose = verbose;
+HumanTracker::HumanTracker() {
 
     wifi_station_disconnect();
     wifi_set_opmode(STATION_MODE);
     wifi_set_channel(_channel);
     wifi_promiscuous_enable(false);
-    wifi_set_promiscuous_rx_cb(promRxCb);
+    // Set callback function for WiFi packets received in promiscuous mode
+    wifi_set_promiscuous_rx_cb(processWifiPacket);
+    // Enable WiFi Promiscuous mode
     wifi_promiscuous_enable(true);
 }
 
 void HumanTracker::loop() {
 
+    // Cycle through all WiFi channels to ensure we capture devices on any channel
     if(millis() > _lastChannelIncrement + CHANNEL_INCREMENT_INTERVAL_MS) {
         _lastChannelIncrement = millis();
 
@@ -71,12 +63,10 @@ void HumanTracker::loop() {
 
     }
 
+    // Calculate the average number of probe requests
     if(millis() > _lastUpdate + ACC_UPDATE_INTERVAL) {
         _lastUpdate = millis();
         _calculateProbeAverage();
-        if(_verbose >= VERBOSE_LOW) {
-            Serial.println("HumanTracker: " + String(_accumulator));
-        }
     } 
     
 }
@@ -89,14 +79,16 @@ void HumanTracker::_calculateProbeAverage() {
 
     uint32_t period = ACC_PERIOD;
 
+    // The period should be the lower of the period parameter, the alpha parameter, 
+    // and the number of cycles elapsed
     if(++_count < period) {
         period = _count;
     }
-
     if(period < ACC_ALPHA) {
         period = ACC_ALPHA;
     }
 
+    // Calculate a running average of probe requests
     _accumulator =  (probeCount * ACC_MULTIPLIER) 
                     + ((_accumulator * (period - ACC_ALPHA)) / period);
 

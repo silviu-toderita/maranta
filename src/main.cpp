@@ -7,35 +7,33 @@
 
 #define UPDATE_INTERVAL 1000
 
-uint64_t lastUpdate = 0;
-
-HumanTracker humanTracker(VERBOSE_OFF);
+HumanTracker humanTracker;
 LightGenerator lightGenerator;
 
 void setup() {
 	Serial.begin(115200);
 
-	Serial.println("\n");
-	Serial.println("*****************************************************************************");
-	Serial.println("                                                                             ");
-	Serial.println("        ███    ███  █████  ██████   █████  ███    ██ ████████  █████         ");
-	Serial.println("        ████  ████ ██   ██ ██   ██ ██   ██ ████   ██    ██    ██   ██        ");
-	Serial.println("        ██ ████ ██ ███████ ██████  ███████ ██ ██  ██    ██    ███████        ");
-	Serial.println("        ██  ██  ██ ██   ██ ██   ██ ██   ██ ██  ██ ██    ██    ██   ██        ");
-	Serial.println("        ██      ██ ██   ██ ██   ██ ██   ██ ██   ████    ██    ██   ██        ");
-	Serial.println("                                                                             ");
-	Serial.println("*****************************************************************************");
+	// Print startup message
+	Serial.println("\n\n");
+	Serial.println("                        *********************************************************************");
+	Serial.println("                                                                                             ");
+	Serial.println("                            ███    ███  █████  ██████   █████  ███    ██ ████████  █████     ");
+	Serial.println("                            ████  ████ ██   ██ ██   ██ ██   ██ ████   ██    ██    ██   ██    ");
+	Serial.println("                            ██ ████ ██ ███████ ██████  ███████ ██ ██  ██    ██    ███████    ");
+	Serial.println("                            ██  ██  ██ ██   ██ ██   ██ ██   ██ ██  ██ ██    ██    ██   ██    ");
+	Serial.println("                            ██      ██ ██   ██ ██   ██ ██   ██ ██   ████    ██    ██   ██    ");
+	Serial.println("                                                                                             ");
+	Serial.println("                        *********************************************************************");
 	Serial.println();
-	Serial.println("         +++++++++++++++++++++  PLANT ONLINE  ++++++++++++++++++++++\n");
+	Serial.println();
+	Serial.println();
 
+	// Print graph titles
+	Serial.println("Humans                                                                                                           Max");
+	Serial.println("------+                                                                                                        +------");
 }
 
 void loop() {
     humanTracker.loop();
 	lightGenerator.loop(humanTracker.get());
-
-	if(millis() > lastUpdate + UPDATE_INTERVAL) {
-		lastUpdate = millis();
-		// Serial.println("HumanTracker: " + String(humanTracker.get()));
-	}
 }
