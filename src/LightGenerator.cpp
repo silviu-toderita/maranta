@@ -20,13 +20,9 @@ void LightGenerator::loop(uint32_t humans) {
     // Calculate the intensity factor
     _intensity = (humans * INTENSITY_FACTOR) / _maxHumans;
 
-    uint8_t colorId = 0;
-
-    // If any humans are detected, calculate the color ID
-    if(_intensity) {
-        colorId = ((_intensity * COLORS_IN_PALETTE) - 1) / INTENSITY_FACTOR;
-    }
-    Color color = colorCalculator(PALETTES[1]);
+    Color palette[5];
+    getColorPalette(palette);
+    Color color = getColorHue(palette);
     
     // Update the NeoPixel
     _pixel.clear();
@@ -36,15 +32,55 @@ void LightGenerator::loop(uint32_t humans) {
     printGraph(humans);
 }
 
-Color LightGenerator::colorCalculator(const Color palette[]) {
-    uint8_t colorId = 0;
+void LightGenerator::getColorPalette(Color *palette) {
+    _aggregateIntensity += _intensity;
+
+    if(_aggregateIntensity >= PALETTE_CHANGE_INTENSITY) {
+        _aggregateIntensity = 0;
+        _currentPalette = _nextPalette;
+        if(_nextPalette == NUMBER_OF_PALETTES - 1) {
+            _nextPalette = 0;
+        } else {
+            _nextPalette++;
+        }
+    }
+    
+    for(uint8_t i = 0; i < COLORS_IN_PALETTE; i++) {
+
+        int64_t deltaRed = PALETTES[_nextPalette][i].R - PALETTES[_currentPalette][i].R;
+        int32_t deltaGreen = PALETTES[_nextPalette][i].G - PALETTES[_currentPalette][i].G;
+        int32_t deltaBlue = PALETTES[_nextPalette][i].B - PALETTES[_currentPalette][i].B;
+
+        palette[i] = PALETTES[_currentPalette][i];
+        palette[i].R += (deltaRed * _aggregateIntensity) / PALETTE_CHANGE_INTENSITY;
+        palette[i].G += (deltaGreen * _aggregateIntensity) / PALETTE_CHANGE_INTENSITY;
+        palette[i].B += (deltaBlue * _aggregateIntensity) / PALETTE_CHANGE_INTENSITY; 
+
+    }
+
+}
+
+Color LightGenerator::getColorHue(Color *palette) {
+    uint8_t baseColorId = 0;
+    uint16_t colorMod = 0;
+    uint16_t colorModMax = INTENSITY_FACTOR / (COLORS_IN_PALETTE - 1);
 
     // If any humans are detected, calculate the color ID
     if(_intensity) {
-        colorId = ((_intensity * COLORS_IN_PALETTE) - 1) / INTENSITY_FACTOR;
+        baseColorId = _intensity / colorModMax;
+        colorMod = _intensity % colorModMax;
     }
+
+    int8_t deltaRed = palette[baseColorId+1].R - palette[baseColorId].R;
+    int8_t deltaGreen = palette[baseColorId+1].G - palette[baseColorId].G;
+    int8_t deltaBlue = palette[baseColorId+1].B - palette[baseColorId].B;
+
+    Color output = palette[baseColorId];
+    output.R += (deltaRed * colorMod) / colorModMax;
+    output.G += (deltaGreen * colorMod) / colorModMax;
+    output.B += (deltaBlue * colorMod) / colorModMax;    
     
-    return palette[colorId];
+    return output;
 }
 
 void LightGenerator::printGraph(uint32_t humans) {
@@ -86,5 +122,6 @@ void LightGenerator::printGraph(uint32_t humans) {
     // Print the max number of humans
     Serial.printf("|%5d", _maxHumans/100);
 
-    Serial.printf("|  Intensity:%5d", _intensity);
+    Serial.printf(" Palette: %2d", _currentPalette);
+
 }

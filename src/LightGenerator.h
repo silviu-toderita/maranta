@@ -16,6 +16,8 @@
 
 #define CONSOLE_GRAPH_CHAR_LENGTH   100
 
+#define PALETTE_CHANGE_INTENSITY    20000000
+
 /**
  * Generates light patterns on a single NeoPixel LED
 **/
@@ -40,18 +42,28 @@ class LightGenerator {
         uint32_t _humans;
         uint32_t _maxHumans = DEFAULT_MAX_HUMANS;
         uint32_t _intensity = 0;
+        int64_t _aggregateIntensity = 0;
+        uint8_t _currentPalette = 0;
+        uint8_t _nextPalette = 1;
 
         uint64_t _lastPrint = 0;
         uint64_t _lastDecrementMax = 0;
 
         /**
+         * Calculate a color palette based on aggregate intensity
+         * 
+         * @param color pointer to palette to fill with color
+        **/
+        void getColorPalette(Color *palette);
+
+        /**
          * Calculate the averaged color from a palette based on the intensity factor
          * 
-         * @param palette[]
+         * @param palette of possible colors
          * 
          * @return averaged color
         **/
-        Color colorCalculator(const Color palette[]);
+        Color getColorHue(Color *palette);
 
         /**
          * Print a graph of the current light status

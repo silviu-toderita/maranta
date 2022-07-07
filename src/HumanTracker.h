@@ -11,7 +11,7 @@
 
 #define ACC_UPDATE_INTERVAL 100
 #define ACC_MULTIPLIER      100
-#define ACC_PERIOD          600 
+#define ACC_PERIOD          300 
 #define ACC_ALPHA           2
 
 /**

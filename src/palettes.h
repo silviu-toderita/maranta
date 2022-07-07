@@ -2,7 +2,8 @@
 
 #include "Arduino.h"
 
-#define COLORS_IN_PALETTE 5
+#define NUMBER_OF_PALETTES  16
+#define COLORS_IN_PALETTE   5
 
 struct Color {
     uint8_t R;
@@ -10,7 +11,8 @@ struct Color {
     uint8_t B;
 };
 
-constexpr Color PALETTES[][5] = {{{13,42,46},    {45,93,99},     {30,122,143},   {20,126,150},   {36,123,140}},
+constexpr Color PALETTES[NUMBER_OF_PALETTES][COLORS_IN_PALETTE] = 
+                                {{{13,42,46},    {45,93,99},     {30,122,143},   {20,126,150},   {36,123,140}},
                                 {{121,135,27},  {181,112,0},    {186,129,43},   {237,135,33},   {250,105,72}},
                                 {{17,212,127},  {98,179,101},   {74,224,212},   {25,250,239},   {169,209,206}},
                                 {{6,106,207},   {2,97,240},     {24,113,245},   {80,222,153},   {121,163,189}},
