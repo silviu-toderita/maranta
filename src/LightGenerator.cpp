@@ -4,6 +4,7 @@
 LightGenerator::LightGenerator() : _pixel(NUMBER_OF_LEDS, PIN_LED, LED_TYPE) {
     _pixel.begin();
     _pixel.setBrightness(255); 
+
 }
 
 void LightGenerator::loop(uint32_t humans) {
@@ -23,13 +24,16 @@ void LightGenerator::loop(uint32_t humans) {
     Color palette[5];
     getColorPalette(palette);
     Color color = getColorHue(palette);
-    
+    calculateBrightness();
+
     // Update the NeoPixel
     _pixel.clear();
     _pixel.setPixelColor(0, color.R, color.G, color.B);
+    _pixel.setBrightness(_brightness);
     _pixel.show();
 
-    printGraph(humans);
+    printStatus(humans);
+    _lastIntensity = _intensity;
 }
 
 void LightGenerator::getColorPalette(Color *palette) {
@@ -83,23 +87,51 @@ Color LightGenerator::getColorHue(Color *palette) {
     return output;
 }
 
-void LightGenerator::printGraph(uint32_t humans) {
+void LightGenerator::calculateBrightness() {
+    if(_intensity > _lastIntensity) {
+        if(_brightness <= BRIGHTNESS_MAX - BRIGHTNESS_PULSE) {
+            _brightness += BRIGHTNESS_PULSE;
+        } else {
+            _brightness = BRIGHTNESS_MAX;
+        }
+    } else {
+        if(_brightness >= BRIGHTNESS_DECREASE) {
+            _brightness -= BRIGHTNESS_DECREASE;
+        } else {
+            _brightness = 0;
+        }
+    }
+}
+
+void LightGenerator::printStatus(uint32_t humans) {
 
     // Overwrite last line
     Serial.printf("\r");
     
     // Print star if a probe was recently detected
-    if(HumanTracker::probeCount) {
+    if(_intensity > _lastIntensity) {
         Serial.printf("*");
     } else {
         Serial.printf(" ");
     }
 
     // Print the actual number of humans recently detected
-    Serial.printf("%5d|", humans/100);
+    Serial.printf("%4d/", humans/100);
+    // Print the max number of humans
+    Serial.printf("%4d |", _maxHumans/100);
 
-    // Calculate and render graph
-    uint8_t graphSection = CONSOLE_GRAPH_CHAR_LENGTH / COLORS_IN_PALETTE;
+    printGraphIntensity();
+
+    Serial.printf("|");
+
+    printGraphPalette();
+
+}
+
+void LightGenerator::printGraphIntensity() {
+    
+
+    uint8_t graphSection = INTENSITY_GRAPH_LENGTH / COLORS_IN_PALETTE;
     uint8_t markerPosition = 0;
     if(_intensity) {
         markerPosition = (((_intensity * COLORS_IN_PALETTE) -1) * graphSection) / INTENSITY_FACTOR;
@@ -119,9 +151,21 @@ void LightGenerator::printGraph(uint32_t humans) {
         }
     }
 
-    // Print the max number of humans
-    Serial.printf("|%5d", _maxHumans/100);
+}
 
-    Serial.printf(" Palette: %2d", _currentPalette);
+void LightGenerator::printGraphPalette() {
+    Serial.printf("|");
+
+    uint8_t markerPosition = (_aggregateIntensity * PALETTE_GRAPH_LENGTH) / PALETTE_CHANGE_INTENSITY;
+
+    for(uint8_t i = 0; i < PALETTE_GRAPH_LENGTH; i++) {
+        if(i == markerPosition) {
+            Serial.printf("+");
+        } else {
+            Serial.printf("-");
+        }
+    }
+
+    Serial.printf("|%2d",_currentPalette + 1);
 
 }

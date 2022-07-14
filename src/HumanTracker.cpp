@@ -89,8 +89,7 @@ void HumanTracker::_calculateProbeAverage() {
     }
 
     // Calculate a running average of probe requests
-    _accumulator =  (probeCount * ACC_MULTIPLIER) 
-                    + ((_accumulator * (period - ACC_ALPHA)) / period);
+    _accumulator =  (probeCount * ACC_MULTIPLIER) + ((_accumulator * (period - ACC_ALPHA)) / period);
 
     probeCount = 0;
 }

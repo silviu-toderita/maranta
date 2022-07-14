@@ -29,8 +29,7 @@ void setup() {
 	Serial.println();
 
 	// Print graph titles
-	Serial.println("Humans                                                                                                           Max");
-	Serial.println("------+                                                                                                        +------");
+	Serial.println("  Humans   |Intensity                                                                                               ||Aggregate Intensity |Palette");
 }
 
 void loop() {
