@@ -2,12 +2,8 @@
 
 #include "HumanTracker.h"
 
-#define CHANNEL_INCREMENT_INTERVAL_MS   200
-#define MAC_ADDR_LENGTH                 6
-#define WIFI_CTRL_MSG_LENGTH            12
-#define WIFI_FRAME_SRC_ADDR_OFFSET      10
-#define FRAME_TYPE_PROBE_REQ            0x40
 
+// STATIC
 uint32_t HumanTracker::probeCount = 0;
 
 /**
@@ -63,33 +59,16 @@ void HumanTracker::loop() {
 
     }
 
-    // Calculate the average number of probe requests
-    if(millis() > _lastUpdate + ACC_UPDATE_INTERVAL) {
-        _lastUpdate = millis();
-        _calculateProbeAverage();
-    } 
+    // If any probe requests have been detected since the last loop, call the callback function
+    if(probeCount) {
+        if(_callback) {
+            _callback(probeCount);
+        }
+        probeCount = 0;
+    }
     
 }
 
-uint32_t HumanTracker::get() {
-    return _accumulator;
-}
-
-void HumanTracker::_calculateProbeAverage() {
-
-    uint32_t period = ACC_PERIOD;
-
-    // The period should be the lower of the period parameter, the alpha parameter, 
-    // and the number of cycles elapsed
-    if(++_count < period) {
-        period = _count;
-    }
-    if(period < ACC_ALPHA) {
-        period = ACC_ALPHA;
-    }
-
-    // Calculate a running average of probe requests
-    _accumulator =  (probeCount * ACC_MULTIPLIER) + ((_accumulator * (period - ACC_ALPHA)) / period);
-
-    probeCount = 0;
+void HumanTracker::setProbeCallback(void (*callback)(int)) {
+    _callback = callback;
 }

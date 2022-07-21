@@ -1,171 +1,93 @@
+#include "ESP8266TrueRandom.h"
+
 #include "LightGenerator.h"
-#include "HumanTracker.h"
+#include "constants.h"
 
 LightGenerator::LightGenerator() : _pixel(NUMBER_OF_LEDS, PIN_LED, LED_TYPE) {
     _pixel.begin();
-    _pixel.setBrightness(255); 
+    _pixel.setBrightness(255);
 
 }
 
-void LightGenerator::loop(uint32_t humans) {
-    _humans = humans;
+void LightGenerator::begin() {
+    _colorBase = _generateColor();
+    _colorNext = _generateColor(); 
+}
 
-    // Calculate the max human number
-    if(humans >= _maxHumans) {
-        _maxHumans = humans;
-    } else if(_maxHumans > DEFAULT_MAX_HUMANS && millis() - _lastDecrementMax >= DECREMENT_MAX_INTERVAL) {
-        _maxHumans--;
-        _lastDecrementMax = millis();
-    }
+void LightGenerator::loop() {
 
-    // Calculate the intensity factor
-    _intensity = (humans * INTENSITY_FACTOR) / _maxHumans;
-
-    Color palette[5];
-    getColorPalette(palette);
-    Color color = getColorHue(palette);
-    calculateBrightness();
+    // Calculate new color
+    _calculateColor();
 
     // Update the NeoPixel
     _pixel.clear();
-    _pixel.setPixelColor(0, color.R, color.G, color.B);
+    _pixel.setPixelColor(0, _colorCurrent.R, _colorCurrent.G, _colorCurrent.B);
     _pixel.setBrightness(_brightness);
     _pixel.show();
 
-    printStatus(humans);
-    _lastIntensity = _intensity;
-}
+    // Decrease brightness
+    if(millis() >= _lastBrightnessDecrease + BRIGHTNESS_DECREASE_INTERVAL) {
+        _lastBrightnessDecrease = millis();
 
-void LightGenerator::getColorPalette(Color *palette) {
-    _aggregateIntensity += _intensity;
-
-    if(_aggregateIntensity >= PALETTE_CHANGE_INTENSITY) {
-        _aggregateIntensity = 0;
-        _currentPalette = _nextPalette;
-        if(_nextPalette == NUMBER_OF_PALETTES - 1) {
-            _nextPalette = 0;
-        } else {
-            _nextPalette++;
-        }
-    }
-    
-    for(uint8_t i = 0; i < COLORS_IN_PALETTE; i++) {
-
-        int64_t deltaRed = PALETTES[_nextPalette][i].R - PALETTES[_currentPalette][i].R;
-        int32_t deltaGreen = PALETTES[_nextPalette][i].G - PALETTES[_currentPalette][i].G;
-        int32_t deltaBlue = PALETTES[_nextPalette][i].B - PALETTES[_currentPalette][i].B;
-
-        palette[i] = PALETTES[_currentPalette][i];
-        palette[i].R += (deltaRed * _aggregateIntensity) / PALETTE_CHANGE_INTENSITY;
-        palette[i].G += (deltaGreen * _aggregateIntensity) / PALETTE_CHANGE_INTENSITY;
-        palette[i].B += (deltaBlue * _aggregateIntensity) / PALETTE_CHANGE_INTENSITY; 
-
-    }
-
-}
-
-Color LightGenerator::getColorHue(Color *palette) {
-    uint8_t baseColorId = 0;
-    uint16_t colorMod = 0;
-    uint16_t colorModMax = INTENSITY_FACTOR / (COLORS_IN_PALETTE - 1);
-
-    // If any humans are detected, calculate the color ID
-    if(_intensity) {
-        baseColorId = _intensity / colorModMax;
-        colorMod = _intensity % colorModMax;
-    }
-
-    int8_t deltaRed = palette[baseColorId+1].R - palette[baseColorId].R;
-    int8_t deltaGreen = palette[baseColorId+1].G - palette[baseColorId].G;
-    int8_t deltaBlue = palette[baseColorId+1].B - palette[baseColorId].B;
-
-    Color output = palette[baseColorId];
-    output.R += (deltaRed * colorMod) / colorModMax;
-    output.G += (deltaGreen * colorMod) / colorModMax;
-    output.B += (deltaBlue * colorMod) / colorModMax;    
-    
-    return output;
-}
-
-void LightGenerator::calculateBrightness() {
-    if(_intensity > _lastIntensity) {
-        if(_brightness <= BRIGHTNESS_MAX - BRIGHTNESS_PULSE) {
-            _brightness += BRIGHTNESS_PULSE;
-        } else {
-            _brightness = BRIGHTNESS_MAX;
-        }
-    } else {
         if(_brightness >= BRIGHTNESS_DECREASE) {
             _brightness -= BRIGHTNESS_DECREASE;
         } else {
             _brightness = 0;
         }
+
     }
+
+
 }
 
-void LightGenerator::printStatus(uint32_t humans) {
+void LightGenerator::probeReceived(int numProbes) {
+    _totalProbes += numProbes;
 
-    // Overwrite last line
-    Serial.printf("\r");
-    
-    // Print star if a probe was recently detected
-    if(_intensity > _lastIntensity) {
-        Serial.printf("*");
+    if ((numProbes * BRIGHTNESS_PULSE) + _brightness > BRIGHTNESS_MAX) {
+        _brightness = BRIGHTNESS_MAX;
     } else {
-        Serial.printf(" ");
+        _brightness += BRIGHTNESS_PULSE;
+    }
+}
+
+Color LightGenerator::getColor() {
+    return _colorCurrent;
+}
+
+uint8_t LightGenerator::getBrightness() {
+    return _brightness;
+}
+
+uint8_t LightGenerator::getColorProgress() {
+    return (_totalProbes * COLOR_PROGRESS_MAX_OUTPUT) / COLOR_PROGRESS_MAX;
+}
+
+void LightGenerator::_calculateColor() {
+
+    if(_totalProbes >= COLOR_PROGRESS_MAX) {
+        _totalProbes = 0;
+        _colorBase = _colorNext;
+        _colorNext = _generateColor();
     }
 
-    // Print the actual number of humans recently detected
-    Serial.printf("%4d/", humans/100);
-    // Print the max number of humans
-    Serial.printf("%4d |", _maxHumans/100);
+    int16_t deltaRed = _colorNext.R - _colorBase.R;
+    int16_t deltaGreen = _colorNext.G - _colorBase.G;
+    int16_t deltaBlue = _colorNext.B - _colorBase.B;
 
-    printGraphIntensity();
-
-    Serial.printf("|");
-
-    printGraphPalette();
+    _colorCurrent = _colorBase;
+    _colorCurrent.R += (deltaRed * _totalProbes) / COLOR_PROGRESS_MAX;
+    _colorCurrent.G += (deltaGreen * _totalProbes) / COLOR_PROGRESS_MAX;
+    _colorCurrent.B += (deltaBlue * _totalProbes) / COLOR_PROGRESS_MAX; 
 
 }
 
-void LightGenerator::printGraphIntensity() {
+Color LightGenerator::_generateColor() {
+    Color color;
     
+    color.R = ESP8266TrueRandom.random(COLOR_MIN, COLOR_MAX);
+    color.G = ESP8266TrueRandom.random(COLOR_MIN, COLOR_MAX);
+    color.B = ESP8266TrueRandom.random(COLOR_MIN, COLOR_MAX);
 
-    uint8_t graphSection = INTENSITY_GRAPH_LENGTH / COLORS_IN_PALETTE;
-    uint8_t markerPosition = 0;
-    if(_intensity) {
-        markerPosition = (((_intensity * COLORS_IN_PALETTE) -1) * graphSection) / INTENSITY_FACTOR;
-    }
-    uint8_t currentMarker = 0;
-
-    for(int sections = 0; sections < COLORS_IN_PALETTE; sections++) {
-        for(int dashes = 0; dashes < graphSection; dashes++) {
-            if(currentMarker++ == markerPosition) {
-                Serial.print("X");
-            } else {
-                Serial.print("-");
-            }
-        }
-        if(sections < COLORS_IN_PALETTE - 1) {
-            Serial.print("/");
-        }
-    }
-
-}
-
-void LightGenerator::printGraphPalette() {
-    Serial.printf("|");
-
-    uint8_t markerPosition = (_aggregateIntensity * PALETTE_GRAPH_LENGTH) / PALETTE_CHANGE_INTENSITY;
-
-    for(uint8_t i = 0; i < PALETTE_GRAPH_LENGTH; i++) {
-        if(i == markerPosition) {
-            Serial.printf("+");
-        } else {
-            Serial.printf("-");
-        }
-    }
-
-    Serial.printf("|%2d",_currentPalette + 1);
+    return color;
 
 }

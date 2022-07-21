@@ -1,18 +1,12 @@
-#ifndef _HUMAN_TRACKER_H_
-#define _HUMAN_TRACKER_H_
+#pragma once
 
 #include <queue>
 #include <map>
 
 #include "Arduino.h"
 
-#define WIFI_CHANNEL_MIN    1
-#define WIFI_CHANNEL_MAX    11
+#include "constants.h"
 
-#define ACC_UPDATE_INTERVAL 100
-#define ACC_MULTIPLIER      100
-#define ACC_PERIOD          300 
-#define ACC_ALPHA           2
 
 /**
  * Tracks the number of humans nearby using WiFi probe requests
@@ -33,26 +27,16 @@ class HumanTracker {
         void loop();
 
         /**
-         * Get the number of humans detected nearby
+         * Set a callback function to call when new probe requests are detected
          * 
-         * @return the number of humans nearby x100
-        **/
-        uint32_t get();
+         * @param callback
+        **/ 
+        void setProbeCallback(void (*callback)(int));
 
     private:
 
         uint8_t _channel = WIFI_CHANNEL_MIN;
         uint64_t _lastChannelIncrement = 0;
-
-        uint32_t _accumulator = 0;
-        uint32_t _count = 0;
-        uint64_t _lastUpdate = 0;
-
-        /**
-         * Calculate the average number of probes based on new probe requests
-        **/
-        void _calculateProbeAverage();
+        void (*_callback)(int) = NULL;
 
 };
-
-#endif

@@ -3,36 +3,28 @@
 
 #include "HumanTracker.h"
 #include "LightGenerator.h"
-#include "palettes.h"
-
-#define UPDATE_INTERVAL 1000
+#include "SerialUi.h"
 
 HumanTracker humanTracker;
 LightGenerator lightGenerator;
+SerialUi serialUi;
+
+void probeCallback(int probes) {
+	lightGenerator.probeReceived(probes);
+}
 
 void setup() {
-	Serial.begin(115200);
 
-	// Print startup message
-	Serial.println("\n\n");
-	Serial.println("                        *********************************************************************");
-	Serial.println("                                                                                             ");
-	Serial.println("                            ███    ███  █████  ██████   █████  ███    ██ ████████  █████     ");
-	Serial.println("                            ████  ████ ██   ██ ██   ██ ██   ██ ████   ██    ██    ██   ██    ");
-	Serial.println("                            ██ ████ ██ ███████ ██████  ███████ ██ ██  ██    ██    ███████    ");
-	Serial.println("                            ██  ██  ██ ██   ██ ██   ██ ██   ██ ██  ██ ██    ██    ██   ██    ");
-	Serial.println("                            ██      ██ ██   ██ ██   ██ ██   ██ ██   ████    ██    ██   ██    ");
-	Serial.println("                                                                                             ");
-	Serial.println("                        *********************************************************************");
-	Serial.println();
-	Serial.println();
-	Serial.println();
+	humanTracker.setProbeCallback(probeCallback);
 
-	// Print graph titles
-	Serial.println("  Humans   |Intensity                                                                                               ||Aggregate Intensity |Palette");
+	lightGenerator.begin();
+
+	serialUi.begin();
+
 }
 
 void loop() {
     humanTracker.loop();
-	lightGenerator.loop(humanTracker.get());
+	lightGenerator.loop();
+	serialUi.loop(lightGenerator.getColor(), lightGenerator.getBrightness(), lightGenerator.getColorProgress());
 }
